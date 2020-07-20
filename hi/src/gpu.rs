@@ -110,9 +110,7 @@ pub struct GpuSettings {
 
 impl Gpu {
     pub fn new(gpu: PhysicalGpu) -> Self {
-        Gpu {
-            gpu: gpu,
-        }
+        Gpu { gpu }
     }
 
     pub fn into_inner(self) -> PhysicalGpu {
@@ -141,7 +139,7 @@ impl Gpu {
             bios_version: self.gpu.vbios_version_string()?,
             driver_model: self.gpu.driver_model()?,
             vendor: allowable_result_fallback(pci.vendor().map_err(From::from), Vendor::Unknown)?,
-            pci: pci,
+            pci,
             memory: self.gpu.memory_info()?,
             system_type: allowable_result_fallback(self.gpu.system_type(), SystemType::Unknown)?,
             ram_type: allowable_result_fallback(self.gpu.ram_type(), RamType::Unknown)?,
@@ -295,7 +293,7 @@ impl Gpu {
     pub fn set_vfp_lock(&self, voltage: Microvolts) -> nvapi::Result<()> {
         self.gpu.set_vfp_locks(self.gpu.vfp_locks()?
             .into_iter().max_by_key(|&(id, _)| id).into_iter()
-            .map(|(id, entry)| (id, Some(voltage)))
+            .map(|(id, _entry)| (id, Some(voltage)))
         )
     }
 
@@ -304,10 +302,48 @@ impl Gpu {
     }
 
     pub fn reset_vfp(&self) -> nvapi::Result<()> {
-        use std::iter;
-
         let mask = self.gpu.vfp_mask()?;
-        self.gpu.set_vfp_table(mask.mask, iter::empty(), iter::empty())
+        self.gpu.set_vfp_table(mask.mask, std::iter::empty(), std::iter::empty())
+    }
+
+    pub fn connected_displays(&self) -> nvapi::Result<Vec<nvapi::Display>> {
+        self.gpu.enumerate_displays()
+    }
+}
+
+const NV_VIBRANCE_VALUES: [u8; 51] = [0,1,3,4,5,6,8,9,10,11,13,14,15,16,18,19,20,21,23,24,25,26,28,29,30,32,33,34,35,37,38,39,40,42,43,44,45,
+47,48,49,50,52,53,54,55,57,58,59,60,62,63];
+
+#[cfg_attr(feature = "serde_derive", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone)]
+pub struct Display(nvapi::Display);
+
+impl std::ops::Deref for Display {
+    type Target = nvapi::Display;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for Display {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl Display {
+    pub fn get_vibrance(&self) -> nvapi::Result<nvapi::DvcInfo> {
+        self.0.dvc_read()
+    }
+
+    pub fn set_vibrance(&self, mut vibrance_percent: u8) -> nvapi::Result<nvapi::DvcInfo> {
+        if vibrance_percent < 50 {
+            vibrance_percent = 50;
+        } else if vibrance_percent > 100 {
+            vibrance_percent = 100;
+        }
+
+        self.0.dvc_set(NV_VIBRANCE_VALUES[vibrance_percent as usize].into())
     }
 }
 
@@ -349,7 +385,7 @@ impl From<ClockEntry> for PStateLimit {
                 frequency_delta: if editable { Some(frequency_delta.range) } else { None },
                 frequency: frequency_range,
                 voltage: voltage_range,
-                voltage_domain: voltage_domain,
+                voltage_domain,
             },
             ClockEntry::Single { domain: _, editable, frequency_delta, frequency } => PStateLimit {
                 frequency_delta: if editable { Some(frequency_delta.range) } else { None },
@@ -500,7 +536,7 @@ impl From<ClockTable> for VfpDeltas {
     fn from(c: ClockTable) -> Self {
         VfpDeltas {
             graphics: c.gpu_delta.into_iter().map(|(i, d)| (i, d.into())).collect(),
-            memory: c.mem_delta.into_iter().map(|(i, d)| (i, d.into())).collect(),
+            memory: c.mem_delta.into_iter().map(|(i, d)| (i, d)).collect(),
         }
     }
 }
@@ -518,7 +554,7 @@ impl VfPoint {
         VfPoint {
             voltage: point.voltage,
             frequency: point.frequency,
-            delta: delta,
+            delta,
         }
     }
 }

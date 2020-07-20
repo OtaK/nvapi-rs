@@ -95,7 +95,7 @@ pub struct VfpMaskIter<'a> {
 impl<'a> VfpMaskIter<'a> {
     pub fn new(mask: &'a [u32]) -> Self {
         VfpMaskIter {
-            mask: mask,
+            mask,
             offset: 0,
         }
     }
@@ -105,7 +105,7 @@ impl<'a> Iterator for VfpMaskIter<'a> {
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while self.mask.len() > 0 {
+        while !self.mask.is_empty() {
             let offset = self.offset;
             let bit = offset % 32;
             let set = self.mask[0] & (1u32 << bit) != 0;
@@ -325,7 +325,7 @@ impl RawConversion for power::private::NV_VFP_CURVE {
 }
 
 fn all_zero(s: &[u32]) -> bool {
-    return s.iter().all(|&v| v == 0)
+    s.iter().all(|&v| v == 0)
 }
 
 impl RawConversion for power::private::NV_VOLTAGE_STATUS_V1 {
@@ -423,7 +423,7 @@ impl RawConversion for power::private::NV_GPU_POWER_TOPO_ENTRY {
         trace!("convert_raw({:#?})", self);
         match *self {
             power::private::NV_GPU_POWER_TOPO_ENTRY {
-                a: unknown, b: 0, power, d: 0
+                a: _unknown, b: 0, power, d: 0
             } => Ok(Percentage1000(power)),
             _ => Err(sys::ArgumentRangeError),
         }
@@ -547,7 +547,7 @@ impl RawConversion for power::private::NV_GPU_PERF_STATUS {
             power::private::NV_GPU_PERF_STATUS {
                 flags: 0, limits, zero0: 0, unknown, zero1: 0, ..
             } => Ok(PerfStatus {
-                unknown: unknown,
+                unknown,
                 limits: PerfFlags::from_bits(limits).ok_or(sys::ArgumentRangeError)?,
             }),
             _ => Err(sys::ArgumentRangeError),

@@ -63,9 +63,9 @@ nvstruct! {
 }
 
 #[cfg(target_pointer_width = "64")]
-const NV_I2C_INFO_V1_SIZE: usize = 4 * 2 + (1 * 2) + 6 + 8 + 4 + 4 + 8 + 4 * 2;
+const NV_I2C_INFO_V1_SIZE: usize = 4 * 2 + 2 + 6 + 8 + 4 + 4 + 8 + 4 * 2;
 #[cfg(target_pointer_width = "32")]
-const NV_I2C_INFO_V1_SIZE: usize = 4 * 2 + (1 * 2) + 2 + 4 + 4 + 4 + 4 * 2;
+const NV_I2C_INFO_V1_SIZE: usize = 4 * 2 + 2 + 2 + 4 + 4 + 4 + 4 * 2;
 
 nvstruct! {
     /// Used in NvAPI_I2CRead() and NvAPI_I2CWrite()
@@ -251,9 +251,9 @@ pub mod private {
     }
 
     #[cfg(target_pointer_width = "64")]
-    const NV_I2C_INFO_EX_V3_SIZE: usize = 4 * 2 + (1 * 2) + 6 + 8 + 4 + 4 + 8 + 4 * 3 + 1 + 3 + 4 + 4;
+    const NV_I2C_INFO_EX_V3_SIZE: usize = 4 * 2 + 2 + 6 + 8 + 4 + 4 + 8 + 4 * 3 + 1 + 3 + 4 + 4;
     #[cfg(target_pointer_width = "32")]
-    const NV_I2C_INFO_EX_V3_SIZE: usize = 4 * 2 + (1 * 2) + 2 + 4 + 4 + 4 + 4 * 3 + 1 + 3 + 4;
+    const NV_I2C_INFO_EX_V3_SIZE: usize = 4 * 2 + 2 + 2 + 4 + 4 + 4 + 4 * 3 + 1 + 3 + 4;
 
     pub type NV_I2C_INFO_EX = NV_I2C_INFO_EX_V3;
 

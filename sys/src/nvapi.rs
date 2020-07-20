@@ -6,11 +6,11 @@ use types;
 pub type QueryInterfaceFn = extern "C" fn(id: u32) -> *const c_void;
 
 #[cfg(all(windows, target_pointer_width = "32"))]
-pub const LIBRARY_NAME: &'static [u8; 10] = b"nvapi.dll\0";
+pub const LIBRARY_NAME: &[u8; 10] = b"nvapi.dll\0";
 #[cfg(all(windows, target_pointer_width = "64"))]
-pub const LIBRARY_NAME: &'static [u8; 12] = b"nvapi64.dll\0";
+pub const LIBRARY_NAME: &[u8; 12] = b"nvapi64.dll\0";
 
-pub const FN_NAME: &'static [u8; 21] = b"nvapi_QueryInterface\0";
+pub const FN_NAME: &[u8; 21] = b"nvapi_QueryInterface\0";
 
 static QUERY_INTERFACE_CACHE: AtomicUsize = AtomicUsize::new(0);
 
@@ -113,4 +113,3 @@ nvapi! {
     /// The contents of the string are human readable.  Do not assume a fixed format.
     pub unsafe fn NvAPI_GetInterfaceVersionString;
 }
-

@@ -103,17 +103,16 @@ impl RawConversion for pstate::NV_GPU_PERF_PSTATE20_BASE_VOLTAGE_ENTRY_V1 {
 
     fn convert_raw(&self) -> Result<Self::Target, Self::Error> {
         trace!("convert_raw({:#?})", self);
+        let Delta { value, range } = self.voltDelta_uV.convert_raw().void_unwrap();
         Ok(BaseVoltage {
             voltage_domain: VoltageDomain::from_raw(self.domainId)?,
             editable: self.bIsEditable.get(),
             voltage: Microvolts(self.volt_uV),
-            voltage_delta: match self.voltDelta_uV.convert_raw().void_unwrap() {
-                Delta { value, range } => Delta {
-                    value: MicrovoltsDelta(value.0),
-                    range: Range {
-                        min: MicrovoltsDelta(range.min.0),
-                        max: MicrovoltsDelta(range.max.0),
-                    },
+            voltage_delta: Delta {
+                value: MicrovoltsDelta(value.0),
+                range: Range {
+                    min: MicrovoltsDelta(range.min.0),
+                    max: MicrovoltsDelta(range.max.0),
                 },
             },
         })

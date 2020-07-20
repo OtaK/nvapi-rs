@@ -28,10 +28,13 @@ impl PhysicalGpu {
         trace!("gpu.enumerate()");
         let mut handles = [Default::default(); sys::types::NVAPI_MAX_PHYSICAL_GPUS];
         let mut len = 0;
-        match unsafe { gpu::NvAPI_EnumPhysicalGPUs(&mut handles, &mut len) } {
-            sys::status::NVAPI_NVIDIA_DEVICE_NOT_FOUND => Ok(Vec::new()),
-            status => sys::status_result(status).map(move |_| handles[..len as usize].iter().cloned().map(PhysicalGpu).collect()),
-        }
+        let gpus = match unsafe { gpu::NvAPI_EnumPhysicalGPUs(&mut handles, &mut len) } {
+            sys::status::NVAPI_NVIDIA_DEVICE_NOT_FOUND => Vec::new(),
+            status => sys::status_result(status).map(move |_| handles[..len as usize].iter().cloned().map(PhysicalGpu).collect())?,
+        };
+
+        trace!("gpu.enumerate -> {:#?}", gpus);
+        Ok(gpus)
     }
 
     pub fn tachometer(&self) -> sys::Result<u32> {
@@ -496,7 +499,7 @@ impl PhysicalGpu {
             entry.currentPolicy = level.policy.raw();
         }
 
-        sys::status_result(unsafe { cooler::private::NvAPI_GPU_SetCoolerLevels(self.0, index.unwrap_or(cooler::private::NVAPI_COOLER_TARGET_ALL as _), &mut data) })
+        sys::status_result(unsafe { cooler::private::NvAPI_GPU_SetCoolerLevels(self.0, index.unwrap_or(cooler::private::NVAPI_COOLER_TARGET_ALL as _), &data) })
     }
 
     pub fn restore_cooler_settings(&self, index: &[u32]) -> sys::Result<()> {
@@ -602,7 +605,7 @@ impl PhysicalGpu {
     }
 
     pub fn display_ids_connected(&self, flags: ConnectedIdsFlags) -> sys::Result<Vec<<display::NV_GPU_DISPLAYIDS as RawConversion>::Target>> {
-        trace!("gpu.display_ids_connected({:?})", flags);
+        trace!("gpu.display_ids_connected({:#?})", flags);
         let mut count = 0;
         sys::status_result(unsafe { display::NvAPI_GPU_GetConnectedDisplayIds(self.0, ptr::null_mut(), &mut count, flags.bits()) })?;
 
@@ -610,10 +613,33 @@ impl PhysicalGpu {
         data.version = display::NV_GPU_DISPLAYIDS_VER;
         let mut data = vec![data; count as usize];
 
-        sys::status_result(unsafe { display::NvAPI_GPU_GetConnectedDisplayIds(self.0, data.as_mut_ptr(), &mut count, flags.bits()) })
-            .and_then(|_| data.into_iter().map(|v| v.convert_raw().map_err(From::from)).collect())
+        let ret = sys::status_result(unsafe { display::NvAPI_GPU_GetConnectedDisplayIds(self.0, data.as_mut_ptr(), &mut count, flags.bits()) })
+            .and_then(move |_| data.into_iter().map(|v| v.convert_raw().map_err(From::from)).collect())?;
+        trace!("gpu.display_ids_connnected -> {:#?}", ret);
+        Ok(ret)
     }
 
+    pub fn enumerate_displays(&self) -> sys::Result<Vec<Display>> {
+        use std::convert::TryInto as _;
+        trace!("gpu.enumerate_displays");
+        let mut displays = vec![];
+        for i in 0u32.. {
+            let mut hwnd: DisplayHandle = sys::handles::NvDisplayHandle::default().into();
+            trace!("NvAPI_EnumNvidiaDisplayHandle({:#?}, {:?})", i, hwnd);
+            match sys::status_result(unsafe { sys::dispcontrol::NvAPI_EnumNvidiaDisplayHandle(i, &mut *hwnd) }) {
+                Ok(_) => {
+                    trace!("NvDisplayHandle = {:?}", &(*hwnd));
+                    displays.push(hwnd.try_into()?);
+                },
+                Err(crate::Status::EndEnumeration) => break,
+                Err(e) => return Err(e),
+            }
+        }
+
+        Ok(displays)
+    }
+
+    #[allow(clippy::too_many_arguments)]
     pub fn i2c_read(&self, display_mask: u32, port: Option<u8>, port_is_ddc: bool, address: u8, register: &[u8], bytes: &mut [u8], speed: i2c::I2cSpeed) -> sys::Result<usize> {
         trace!("i2c_read({}, {:?}, {:?}, 0x{:02x}, {:?}, {:?})", display_mask, port, port_is_ddc, address, register, speed);
         let mut data = i2c::NV_I2C_INFO::zeroed();
@@ -636,6 +662,7 @@ impl PhysicalGpu {
             .map(|_| data.cbSize as usize) // TODO: not actually sure if this ever changes?
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn i2c_write(&self, display_mask: u32, port: Option<u8>, port_is_ddc: bool, address: u8, register: &[u8], bytes: &[u8], speed: i2c::I2cSpeed) -> sys::Result<()> {
         trace!("i2c_write({}, {:?}, {:?}, 0x{:02x}, {:?}, {:?})", display_mask, port, port_is_ddc, address, register, speed);
         let mut data = i2c::NV_I2C_INFO::zeroed();
@@ -745,7 +772,7 @@ pub struct DriverModel {
 impl DriverModel {
     pub fn new(value: u32) -> Self {
         DriverModel {
-            value: value,
+            value,
         }
     }
 
@@ -789,6 +816,123 @@ impl RawConversion for display::NV_GPU_DISPLAYIDS {
             connector: MonitorConnectorType::from_raw(self.connectorType)?,
             display_id: self.displayId,
             flags: DisplayIdsFlags::from_bits_truncate(self.flags),
+        })
+    }
+}
+
+impl std::ops::Deref for DisplayId {
+    type Target = u32;
+    fn deref(&self) -> &Self::Target {
+        &self.display_id
+    }
+}
+
+#[derive(Debug, Copy, Clone, Default)]
+#[repr(transparent)]
+pub struct DisplayHandle(sys::handles::NvDisplayHandle);
+impl std::ops::Deref for DisplayHandle {
+    type Target = sys::handles::NvDisplayHandle;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for DisplayHandle {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl From<sys::handles::NvDisplayHandle> for DisplayHandle {
+    fn from(hwnd: sys::handles::NvDisplayHandle) -> Self {
+        Self(hwnd)
+    }
+}
+
+// TODO: Add resolution / modes etc
+#[cfg_attr(feature = "serde_derive", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, Default)]
+pub struct Display {
+    #[serde(skip)]
+    pub hwnd: DisplayHandle,
+    pub display_name: String,
+    pub display_id: u32,
+    pub dvc_info: DvcInfo,
+}
+
+impl std::ops::Deref for Display {
+    type Target = sys::handles::NvDisplayHandle;
+    fn deref(&self) -> &Self::Target {
+        &self.hwnd
+    }
+}
+
+impl std::convert::TryFrom<DisplayHandle> for Display {
+    type Error = crate::Status;
+    fn try_from(hwnd: DisplayHandle) -> Result<Self, Self::Error> {
+        let mut name: sys::NvAPI_ShortString = sys::short_string();
+
+        #[allow(clippy::crosspointer_transmute)]
+        sys::status_result(unsafe { sys::dispcontrol::NvAPI_GetAssociatedNvidiaDisplayName(std::mem::transmute(*hwnd) , &mut name) })?;
+        let display_name = name.convert_raw().unwrap();
+        trace!("NvAPI_GetAssociatedNvidiaDisplayName({:?}) -> {:?}", hwnd, display_name);
+
+        let mut display_id = 0;
+        sys::status_result(unsafe { sys::dispcontrol::NvAPI_DISP_GetDisplayIdByDisplayName(&name, &mut display_id) })?;
+        trace!("NvAPI_DISP_GetDisplayIdByDisplayName({:?}) -> {}", display_name, display_id);
+
+        let mut ret = Self {
+            hwnd,
+            display_id,
+            display_name,
+            dvc_info: Default::default()
+        };
+
+        ret.dvc_info = ret.dvc_read()?;
+        Ok(ret)
+    }
+}
+
+impl Display {
+    pub fn dvc_read(&self) -> sys::Result<<sys::dispcontrol::NV_DISPLAY_DVC_INFO as RawConversion>::Target> {
+        trace!("[{:?}] display.dvc_read()", *self.hwnd);
+        let mut info = sys::dispcontrol::NV_DISPLAY_DVC_INFO::zeroed();
+        info.version = std::mem::size_of::<sys::dispcontrol::NV_DISPLAY_DVC_INFO>() as u32 | 0x10000;
+
+        #[allow(clippy::crosspointer_transmute)]
+        sys::status_result(unsafe { sys::dispcontrol::NvAPI_GetDVCInfo(std::mem::transmute(*self.hwnd), 0, &mut info) })
+            .map(move |_| info.convert_raw().unwrap())
+    }
+
+    pub fn dvc_set(&self, dvc_level: i32) -> sys::Result<<sys::dispcontrol::NV_DISPLAY_DVC_INFO as RawConversion>::Target> {
+        trace!("[{:?}] display.display_dvc_set({})", *self.hwnd, dvc_level);
+
+        #[allow(clippy::crosspointer_transmute)]
+        sys::status_result(unsafe { sys::dispcontrol::NvAPI_SetDVCLevel(std::mem::transmute(*self.hwnd), 0, dvc_level) })?;
+        // Return up to date information
+        self.dvc_read()
+    }
+}
+
+#[cfg_attr(feature = "serde_derive", derive(Serialize, Deserialize))]
+#[derive(Debug, Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Default)]
+pub struct DvcInfo {
+    pub version: u32,
+    pub current_level: i32,
+    pub min_level: i32,
+    pub max_level: i32,
+}
+
+impl RawConversion for sys::dispcontrol::NV_DISPLAY_DVC_INFO {
+    type Target = DvcInfo;
+    type Error = Void;
+
+    fn convert_raw(&self) -> Result<Self::Target, Self::Error> {
+        Ok(DvcInfo {
+            version: self.version,
+            current_level: self.currentLevel,
+            min_level: self.minLevel,
+            max_level: self.maxLevel,
         })
     }
 }

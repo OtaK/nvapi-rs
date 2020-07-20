@@ -4,6 +4,7 @@ macro_rules! nv_declare_handle {
         $name:ident
     ) => {
         $(#[$meta])*
+        #[repr(transparent)]
         #[derive(Copy, Clone, Debug)]
         pub struct $name(*const ::std::os::raw::c_void);
 
@@ -104,7 +105,7 @@ macro_rules! nvenum {
                     $(
                         $enum_name::$name
                     ),*
-                ].into_iter().cloned()
+                ].iter().cloned()
             }
         }
 
@@ -251,4 +252,3 @@ macro_rules! nvversion {
         }*/
     };
 }
-

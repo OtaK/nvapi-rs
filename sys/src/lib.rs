@@ -1,4 +1,4 @@
-#![allow(non_camel_case_types, non_snake_case)]
+#![allow(non_camel_case_types, non_snake_case, clippy::missing_safety_doc)]
 #![doc(html_root_url = "http://arcnmx.github.io/nvapi-rs/")]
 
 #[cfg(windows)]
