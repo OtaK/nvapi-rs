@@ -853,7 +853,7 @@ impl From<sys::handles::NvDisplayHandle> for DisplayHandle {
 #[cfg_attr(feature = "serde_derive", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, Default)]
 pub struct Display {
-    #[serde(skip)]
+    #[cfg_attr(feature = "serde_derive", serde(skip))]
     pub hwnd: DisplayHandle,
     pub display_name: String,
     pub display_id: u32,
