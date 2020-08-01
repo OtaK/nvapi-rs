@@ -6,6 +6,7 @@ pub extern crate nvapi;
 #[macro_use]
 extern crate serde_derive;
 
+mod display;
 mod gpu;
 pub use gpu::*;
 

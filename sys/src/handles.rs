@@ -1,4 +1,4 @@
-use std::os::raw::c_void;
+use std::ffi::c_void;
 
 nv_declare_handle! {
     /// One or more physical GPUs acting in concert (SLI)

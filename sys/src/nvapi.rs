@@ -1,5 +1,5 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::os::raw::c_void;
+use std::ffi::c_void;
 use status::{Status, NvAPI_Status};
 use types;
 

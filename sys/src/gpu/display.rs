@@ -120,7 +120,3 @@ nvapi! {
     /// - `NVAPI_INSUFFICIENT_BUFFER`: When the input buffer(pDisplayIds) is less than the actual number of display IDs
     pub unsafe fn NvAPI_GPU_GetAllDisplayIds;
 }
-
-/*nvapi! {
-    pub type GPU_GetConnectorInfoFn = extern C fn()
-}*/

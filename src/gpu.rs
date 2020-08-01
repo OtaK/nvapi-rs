@@ -830,6 +830,9 @@ impl std::ops::Deref for DisplayId {
 #[derive(Debug, Copy, Clone, Default)]
 #[repr(transparent)]
 pub struct DisplayHandle(sys::handles::NvDisplayHandle);
+
+unsafe impl Send for DisplayHandle {}
+
 impl std::ops::Deref for DisplayHandle {
     type Target = sys::handles::NvDisplayHandle;
     fn deref(&self) -> &Self::Target {
@@ -859,6 +862,8 @@ pub struct Display {
     pub display_id: u32,
     pub dvc_info: DvcInfo,
 }
+
+unsafe impl Send for Display {}
 
 impl std::ops::Deref for Display {
     type Target = sys::handles::NvDisplayHandle;

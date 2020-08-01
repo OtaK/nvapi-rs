@@ -6,7 +6,7 @@ macro_rules! nv_declare_handle {
         $(#[$meta])*
         #[repr(transparent)]
         #[derive(Copy, Clone, Debug)]
-        pub struct $name(*const ::std::os::raw::c_void);
+        pub struct $name(*const ::std::ffi::c_void);
 
         impl Default for $name {
             fn default() -> Self {
