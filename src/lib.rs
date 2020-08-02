@@ -3,9 +3,6 @@
 
 pub extern crate nvapi_sys as sys;
 extern crate void;
-#[cfg(feature = "serde_derive")]
-#[macro_use]
-extern crate serde_derive;
 #[macro_use]
 extern crate log;
 #[cfg(feature = "i2c")]

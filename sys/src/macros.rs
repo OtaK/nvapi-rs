@@ -76,7 +76,7 @@ macro_rules! nvenum {
         )*
 
         $(#[$meta])*
-        #[cfg_attr(feature = "serde_derive", derive(Serialize, Deserialize))]
+        #[cfg_attr(feature = "serde_derive", derive(serde::Serialize, serde::Deserialize))]
         #[derive(Debug, Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
         #[repr(i32)]
         pub enum $enum_name {
@@ -137,7 +137,7 @@ macro_rules! nvbits {
         bitflags! {
             $(#[$meta])*
             #[derive(Default)]
-            #[cfg_attr(feature = "serde_derive", derive(Serialize, Deserialize))]
+            #[cfg_attr(feature = "serde_derive", derive(serde::Serialize, serde::Deserialize))]
             pub struct $enum_name: $enum {
             $(
                 $(#[$($metai)*])*

@@ -2,13 +2,10 @@
 
 pub extern crate nvapi;
 
-#[cfg(feature = "serde_derive")]
-#[macro_use]
-extern crate serde_derive;
-
 mod display;
+pub use self::display::*;
 mod gpu;
-pub use gpu::*;
+pub use self::gpu::*;
 
 pub use nvapi::{
     Status, Result,

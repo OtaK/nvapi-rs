@@ -13,9 +13,8 @@ license = "MIT"
 
 [dependencies]
 nvapi = { version = "^0.1.0", path = "../", default-features = false }
-serde = { version = "^1.0.0", optional = true }
-serde_derive = { version = "^1.0.0", optional = true }
+serde = { version = "^1.0.0", features = ["derive"], optional = true }
 
 [features]
-serde_types = ["serde", "serde_derive", "nvapi/serde_types"]
+serde_types = ["serde", "nvapi/serde_types"]
 default = ["serde_types"]

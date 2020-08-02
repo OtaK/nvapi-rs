@@ -16,9 +16,8 @@ winapi = { version = "^0.3.4", features = ["libloaderapi", "unknwnbase"] }
 
 [dependencies]
 bitflags = "^1.0.1"
-serde = { version = "^1.0.0", optional = true }
-serde_derive = { version = "^1.0.0", optional = true }
+serde = { version = "^1.0.0", features = ["derive"], optional = true }
 
 [features]
-serde_types = ["serde", "serde_derive"]
+serde_types = ["serde"]
 default = ["serde_types"]
