@@ -1,3 +1,6 @@
+#![allow(non_upper_case_globals)]
+
+use NVAPI_ADVANCED_MAX_DISPLAY_PATH;
 use std::os::raw::c_char;
 use status::NvAPI_Status;
 use handles;
@@ -164,7 +167,7 @@ nvenum! {
         NVAPI_GPU_CONNECTOR_HDMI_A / HDMIa = 22,
         NVAPI_GPU_CONNECTOR_HDMI_C_MINI / HDMIcMini = 23,
         NVAPI_GPU_CONNECTOR_LFH_DISPLAYPORT_1 / LfhDisplayPort1 = 24,
-        NVAPI_GPU_CONNECTOR_LFH_DISPLAYPORT_2, / LfhDisplayPort2 = 25,
+        NVAPI_GPU_CONNECTOR_LFH_DISPLAYPORT_2 / LfhDisplayPort2 = 25,
         NVAPI_GPU_CONNECTOR_VIRTUAL_WFD / VirtualWfd = 26,
         NVAPI_GPU_CONNECTOR_USB_C / UsbC = 27,
         NVAPI_GPU_CONNECTOR_UNKNOWN / Unknown = 28,
@@ -195,20 +198,39 @@ nvstruct! {
     }
 }
 
-// nvstruct! {
-//     pub struct NV_DISPLAY_PATH_INFO {
-//         pub version: u32;
-//         pub count: u32;
-
-//     }
-// }
+nvstruct! {
+    pub struct NV_DISPLAY_PATH_INFO {
+        pub version: u32,
+        pub count: u32,
+        pub path: [NV_DISPLAY_PATH; NVAPI_ADVANCED_MAX_DISPLAY_PATH],
+    }
+}
 
 nvapi! {
-    pub type NvAPI_DISP_GetDisplayConfig = extern "C" fn(pathInfoCount: *mut u32, pathInfo: *mut ) -> NvAPI_Status;
+    pub type NvAPI_DISP_GetDisplayConfig = extern "C" fn(pathInfoCount: *mut u32, pathInfo: *mut [NV_DISPLAY_PATH_INFO]) -> NvAPI_Status;
 
-    /// This function returns the handle of an unattached NVIDIA display that is
-    /// associated with the given display name (such as "\\DISPLAY1").
+    /// DESCRIPTION: This API lets caller retrieve the current global display configuration.
+    /// USAGE: The caller might have to call this three times to fetch all the required configuration details as follows:
+    /// - First Pass: Caller should Call NvAPI_DISP_GetDisplayConfig() with pathInfo set to NULL to fetch pathInfoCount.
+    /// - Second Pass: Allocate memory for pathInfo with respect to the number of pathInfoCount(from First Pass) to fetch targetInfoCount. If sourceModeInfo is needed allocate memory or it can be initialized to NULL.
+    /// - Third Pass(Optional, only required if target information is required): Allocate memory for targetInfo with respect to number of targetInfoCount(from Second Pass).
+    ///
+    /// SUPPORTED OS: Windows 7 and higher
     pub unsafe fn NvAPI_DISP_GetDisplayConfig;
+}
+
+nvapi! {
+    pub type NvAPI_DISP_SetDisplayConfig = extern "C" fn(pathInfoCount: u32, pathInfo: *const [NV_DISPLAY_PATH_INFO], flags: u32) -> NvAPI_Status;
+
+    /// DESCRIPTION: This API lets caller apply a global display configuration across multiple GPUs.
+    ///
+    /// If all sourceIds are zero, then NvAPI will pick up sourceId's based on the following criteria :
+    ///
+    /// If user provides sourceModeInfo then we are trying to assign 0th sourceId always to GDIPrimary. This is needed since active windows always moves along with 0th sourceId.
+    /// For rest of the paths, we are incrementally assigning the sourceId per adapter basis.
+    /// If user doesn't provide sourceModeInfo then NVAPI just picks up some default sourceId's in incremental order. Note : NVAPI will not intelligently choose the sourceIDs for any configs that does not need a modeset.
+    /// SUPPORTED OS: Windows 7 and higher
+    pub unsafe fn NvAPI_DISP_SetDisplayConfig;
 }
 
 nvstruct! {

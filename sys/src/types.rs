@@ -82,6 +82,11 @@ pub const NVAPI_SYSTEM_MAX_HWBCS: usize = 128;
 pub const NVAPI_SYSTEM_HWBC_INVALID_ID: usize = 0xffffffff;
 pub const NVAPI_MAX_AUDIO_DEVICES: usize = 16;
 
+pub const NVAPI_ADVANCED_MAX_VIEW_TARGET: usize = 4;
+pub const NVAPI_ADVANCED_MAX_DISPLAY_PATH: usize = NVAPI_ADVANCED_MAX_VIEW_TARGET;
+pub const NVAPI_MAX_VIEW_TARGET: usize = 2;
+pub const NVAPI_MAX_DISPLAY_PATH: usize = NVAPI_MAX_VIEW_TARGET;
+
 pub type NvAPI_String = [c_char; NVAPI_GENERIC_STRING_MAX];
 pub type NvAPI_LongString = [c_char; NVAPI_LONG_STRING_MAX];
 pub type NvAPI_ShortString = [c_char; NVAPI_SHORT_STRING_MAX];
